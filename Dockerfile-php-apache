@@ -1,0 +1,69 @@
+# Set the base image and define an ARG for the user
+ARG user
+
+# Use the official PHP 7.4 Apache image
+FROM php:7.2-fpm
+
+# Set the working directory
+WORKDIR /var/www/html
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
+        libzip-dev \
+        unzip
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo pdo_mysql zip
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Create a user for Composer
+RUN useradd -ms /bin/bash composer
+
+# Set ownership of the working directory
+RUN chown -R composer:composer /var/www/html
+
+# Switch to the Composer user
+USER composer
+
+# Copy only composer files first
+COPY composer.json /var/www/html/
+
+# Set permissions for composer.lock
+# RUN chmod 664 /var/www/html/composer.lock
+
+# Run composer install to install dependencies
+# RUN composer dump-autoload
+# Clear Composer cache
+RUN php /usr/bin/composer clear-cache
+
+# RUN composer suggest
+# RUN composer install --ignore-platform-reqs
+
+
+# Switch back to root user to continue with the rest of the setup
+USER root
+
+# Copy the rest of the application files
+COPY . /var/www/html/
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Additional: Set permissions for other directories if needed
+# RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Enable Apache rewrite module
+RUN a2enmod rewrite
+
+# Copy Apache configuration file
+COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start Apache
+CMD ["apache2-foreground"]
+

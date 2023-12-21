@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "8080:80"
+
+    volumes:
+      - .:/var/www/html
+      # - ./apache-config.conf:/etc/apache2/sites-available/000-default.conf
+      - ./nginx-config.conf:/etc/nginx/sites-available/default
+
+    depends_on:
+      - php-fpm
+
+  php-fpm:
+    image: php:7.2-fpm
+    volumes:
+      - .:/var/www/html
